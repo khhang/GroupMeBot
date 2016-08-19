@@ -1,11 +1,10 @@
 <?php
 include "groupMeHelper.php";
 
+$bot = new GroupMeBot();
 if($_SERVER['REQUEST_METHOD'] == 'POST'){
-	$command = GrabText(file_get_contents("php://input"));
-	LogMessage("counter.txt", "Running command. " . $command);
-	RunCommand($command);
-	LogMessage("counter.txt", "After RunCommand.");
+	$command = $bot->GrabText(file_get_contents("php://input"));
+	$bot->RunCommand($command);
 }
 
 

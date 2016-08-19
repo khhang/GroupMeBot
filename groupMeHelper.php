@@ -1,12 +1,13 @@
 <?php
-	$configs = include("config.php");
-	$GLOBALS['botID'] = $configs['botID'];
-	$GLOBALS['botURL'] = $configs['botURL'];
-	$GLOBALS['weatherKey'] = $configs['weatherKey'];
-	$GLOBALS['weatherURL'] = $configs['weatherURL'];
-	$GLOBALS['log'] = $configs['log'];
+class GroupMeBot {
+	var $configs = include("config.php");
+	var $botID = $configs['botID'];
+	var $botURL = $configs['botURL'];
+	var $weatherKey = $configs['weatherKey'];
+	var $weatherURL = $configs['weatherURL'];
+	var $log = $configs['log'];
 
-	function LogMessage($file,$message){
+	static function LogMessage($file,$message){
 		$fp = fopen($file, "a");
 		fputs($fp,$message . "\n");
 		fclose($fp);
@@ -14,15 +15,12 @@
 
 	// Run bot command
 	function RunCommand($text){
-		 LogMessage($GLOBALS['log'], "Inside RunCommand");
 		if(preg_match("/(![A-Za-z]+)\s(([A-Za-z0-9](\s)?)+)/",$text,$matches)){
 			$command = $matches[1];
 			$details = $matches[2];
-			 LogMessage($GLOBALS['log'], "Found a match.");
 		}
 
 		if($command == "!echo"){
-		 LogMessage($GLOBALS['log'], "Inside echo.");
 			BotEcho($details);
 		}elseif($command == "!weather"){
 			BotWeather($details);
@@ -32,16 +30,16 @@
 	}
 
 	function BotWeather($loc){
-		$url = $GLOBALS['weatherURL'];
-		$params = array("key" => $GLOBALS['weatherKey'], "q" => $loc);
+		$url = $weatherURL;
+		$params = array("key" => $weatherKey, "q" => $loc);
 		$query = $url . "?" . http_build_query($params);
 
 	    $result = file_get_contents($query);
 
 		if($result === FALSE){
-			LogMessage($GLOBALS['log'], "No results from weather POST.");
+			LogMessage($log, "No results from weather POST.");
 		}else{
-			LogMessage($GLOBALS['log'],$result);
+			LogMessage($log,$result);
 			$jsonresult = json_decode($result);
 			if($jsonresult->location->name != NULL){
 				$weatherInfo = "Location: " . $jsonresult->location->name . ", " . $jsonresult->location->country .
@@ -56,9 +54,8 @@
 
 	// Send POST request for bot reply
 	function BotEcho($message){
-		 LogMessage($GLOBALS['log'], "Executing echo command.");
-		 $url = $GLOBALS['botURL'];
-	     $reply = array("bot_id" => $GLOBALS['botID'], "text" => $message);
+		 $url = $botURL;
+	     $reply = array("bot_id" => $botID, "text" => $message);
 	     $options = array(
 	     	"http" => array(
 	        	"header" => "Content-type: application/json\r\n",
@@ -69,7 +66,7 @@
 	     $context = stream_context_create($options);
 	     $result = file_get_contents($url, false, $context);
 
-	     if($result === FALSE){ LogMessage($GLOBALS['log'], "No results."); }
+	     if($result === FALSE){ LogMessage($log, "No results."); }
 	}
 
 	// Grab last message from GroupMe POST request
@@ -82,10 +79,10 @@
 
 	    foreach($jsonIterator as $key => $val){
 	        if($key == "text"){
-	            LogMessage($GLOBALS['log'], "\n$key => $val");
+	            LogMessage($log, "\n$key => $val");
 	            return $val;
 			}
 		}
 	}
-
+}
 ?>
