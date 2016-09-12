@@ -20,10 +20,10 @@
 	// Run bot command
 	function RunCommand($text){
 		 LogMessage($GLOBALS['log'], "Inside RunCommand");
-		if(preg_match("/(!([A-Za-z]+))(\s(([A-Za-z0-9](\s)?)+))?/",$text,$matches)){
+		if(preg_match("/(!([A-Za-z]+))(\s((.*(\s)?)+))?/",$text,$matches)){
 			$command = $matches[1];
 			$details = $matches[3];
-			 LogMessage($GLOBALS['log'], "Found a match.");
+			LogMessage($GLOBALS['log'], "Found a match.");
 		}
 
 		if($command == "!echo"){
@@ -33,12 +33,14 @@
 			BotWeather($details);
 		}elseif($command == "!roll"){
 			BotRoll($details);
+		}elseif($command == "!yelp"){
+			BotYelp($details);
 		}elseif($command != NULL){
 			BotEmoteCheck($matches[2]);
 		}
 	}
 
-	// Gets current weather for specified location
+	// Gets weather for specified location
 	function BotWeather($loc){
 		$url = $GLOBALS['weatherURL'];
 		$params = array("key" => $GLOBALS['weatherKey'], "q" => $loc);
@@ -56,7 +58,7 @@
 	            	"\nCurrent Temp(F): " . $jsonresult->current->temp_f . ", " . $jsonresult->current->condition->text .
 	            	"\nFeels Like(F): " . $jsonresult->current->feelslike_f;
 			}else{
-				$weatherInfo = "Error my bomb is no working hehe my goat xd";
+				$weatherInfo = "Could not find location.";
 			}
 			BotEcho($weatherInfo);
 		}
@@ -64,8 +66,8 @@
 
 	// Send POST request for bot reply
 	function BotEcho($message){
-		 LogMessage($GLOBALS['log'], "Executing echo command.");
-		 $url = $GLOBALS['botURL'];
+		LogMessage($GLOBALS['log'], "Executing echo command.");
+	     $url = $GLOBALS['botURL'];
 	     $reply = array("bot_id" => $GLOBALS['botID'], "text" => $message);
 	     $options = array(
 	     	"http" => array(
@@ -88,12 +90,11 @@
 		}
 	}
 
-	// Checks if emote exists
+	// Check if emote exists
     function BotEmoteCheck($emote){
-        LogMessage($GLOBALS['log'], "Testing upload");
 		$imageURL = "https://image.groupme.com/pictures?access_token=".$GLOBALS['token'];
 		$filename = realpath("./Emotes/".$emote.".png");
-		$image = array("file" => "@".$filename)
+		$image = array("file" => "@".$filename);
 
 		$ch = curl_init($imageURL);
 		curl_setopt($ch, CURLOPT_POST, 1);
@@ -112,8 +113,7 @@
 		}
     }
 
-
-	// Post Emote to group chat
+	// Posts bot image to group chat
 	function BotPostEmote($imageURL){
 		LogMessage($GLOBALS['log'], "Unleashing the KAPPA.");
 		$url = $GLOBALS['botURL'];
@@ -140,6 +140,42 @@
 
 	}
 
+	function BotYelp($details){
+		include "yelp_test/yelp.php";
+
+		LogMessage($GLOBALS['log'], "Inside YelpCommand");
+
+		// Break our arguments into our category and location
+		list($term, $location) = explode(',', $details);
+		LogMessage($GLOBALS['log'], "our location $location");
+		LogMessage($GLOBALS['log'], "our restaraunt $term");
+
+		// Get a response from Yelp's API and post the top
+		// response for our search result
+		$response = json_decode(search($term, $location));
+		$business_id = $response->businesses[0]->id;
+		$response = get_business($business_id);		
+
+		// Creating response message
+		$response_url = json_decode($response)->mobile_url;
+		$rating = json_decode($response)->rating;
+		$address = json_decode($response)->location;
+		$address_message = "";
+		for($i = 0; $i < count($address->display_address); $i++){
+			if($i == count($address->display_address)-1){
+				$address_message .= $address->display_address[$i];
+				break;
+			}
+			$address_message .= $address->display_address[$i] . ", ";
+		}
+
+		$message = $response_url . "\n" . "Rating: $rating\n"
+					. "Address: $address_message\n";
+		BotEcho($message);
+		
+	}
+
+
 	//
 	// End of bot commands
 	//
@@ -159,5 +195,4 @@
 			}
 		}
 	}
-	
 ?>
