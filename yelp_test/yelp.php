@@ -9,14 +9,14 @@
 	require_once('lib/OAuth.php');
 
 	// Setting OAuth credentials
-	$GLOBALS['CONSUMER_KEY'] = '';
-	$GLOBALS['CONSUMER_SECRET'] = '';
-	$GLOBALS['TOKEN'] = '';
-	$GLOBALS['TOKEN_SECRET'] = '';
+	$GLOBALS['CONSUMER_KEY'] = 'k1vwbCTu-We08w-Aq2wfLw';
+	$GLOBALS['CONSUMER_SECRET'] = '3UlB8vN6PemIY6f0IcMjQJH63zs';
+	$GLOBALS['TOKEN'] = '6vreJsZDVQs5c0yHt6mUJ9Y4YOTOGDCZ';
+	$GLOBALS['TOKEN_SECRET'] = '57hHvoRSwQMPnXurNi_btwe5obw';
 	$GLOBALS['API_HOST'] = 'api.yelp.com';
 	$GLOBALS['DEFAULT_TERM'] = 'Manna Korean bbq';
 	$GLOBALS['DEFAULT_LOCATION'] = 'San Diego, CA';
-	$GLOBALS['SEARCH_LIMIT'] = 3; 
+	$GLOBALS['SEARCH_LIMIT'] = 5; 
 	$GLOBALS['SEARCH_PATH'] = '/v2/search/';
 	$GLOBALS['BUSINESS_PATH'] = '/v2/business/';
 
@@ -86,10 +86,9 @@
 	    
 	    $url_params['term'] = $term ?: $GLOBALS['DEFAULT_TERM'];
 	    $url_params['location'] = $location ?: $GLOBALS['DEFAULT_LOCATION'];
-	    //$url_params['limit'] = $GLOBALS['SEARCH_LIMIT'];
-		$url_params['sort'] = 1;
-		$url_params['radius'] = 100;
-		$url_params['cll'] = '32.9185, 117.1382';
+	    $url_params['limit'] = $GLOBALS['SEARCH_LIMIT'];
+		$url_params['sort'] = 0;
+		$url_params['radius_filter'] = 20000;
 		$search_path = $GLOBALS['SEARCH_PATH'] . "?" . http_build_query($url_params);
 	    
 		//return $search_path;

@@ -22,7 +22,7 @@
 		 LogMessage($GLOBALS['log'], "Inside RunCommand");
 		if(preg_match("/(!([A-Za-z]+))(\s((.*(\s)?)+))?/",$text,$matches)){
 			$command = $matches[1];
-			$details = $matches[3];
+			$details = $matches[4];
 			LogMessage($GLOBALS['log'], "Found a match.");
 		}
 
@@ -35,8 +35,37 @@
 			BotRoll($details);
 		}elseif($command == "!yelp"){
 			BotYelp($details);
+		}elseif($command == "!help"){
+			BotHelp($details);
 		}elseif($command != NULL){
 			BotEmoteCheck($matches[2]);
+		}
+	}
+
+	function BotHelp($command){
+		switch($command){
+			case "echo":
+				BotEcho("The echo command will display input text in chat.");
+				break;
+			case "weather":
+				BotEcho("The weather command will display current forecast of given location.");
+				break;
+			case "roll":
+				BotEcho("The roll command will roll a random number from 1 to given input.");
+				break;
+			case "yelp":
+				BotEcho("The yelp command will display information about specified business around given location.");
+				break;
+			case "emotes":
+				BotEcho("List of available emotes: \n I'll add this later.");
+				break;
+			default:
+				BotEcho("Type help with following command for more info: \n" .
+					"1. echo \n" .
+					"2. weather \n" .
+					"3. roll \n" .
+					"4. yelp \n" .
+					"5. emotes \n");
 		}
 	}
 
@@ -146,20 +175,92 @@
 		LogMessage($GLOBALS['log'], "Inside YelpCommand");
 
 		// Break our arguments into our category and location
+		// And set default parameters if empty
 		list($term, $location) = explode(',', $details);
-		LogMessage($GLOBALS['log'], "our location $location");
-		LogMessage($GLOBALS['log'], "our restaraunt $term");
+		if(empty($term)){
+			$term = "manna korean bbq";
+		}
+		if(empty($location)){
+			$location = "92129";
+		}
 
-		// Get a response from Yelp's API and post the top
-		// response for our search result
+		// If user enters in help, prompt them with correct input
+		// format to get best results.
+		if(strcmp($term, "help") == 0){
+			$message = "Enter in command as follows:\n!yelp <name of place>, <location>\n" 
+						. "Ex: !yelp manna korean bbq, mira mesa";
+			BotEcho($message);
+			exit();
+		}
+
+		$term_entries = explode(' ', $term);
+		$search_entry = strtolower(preg_replace('/\s*/', '', $location));
+
+		LogMessage($GLOBALS['log'], "our location: $location");
+		LogMessage($GLOBALS['log'], "our restaraunt: $term");
+		LogMessage($GLOBALS['log'], "our restaraunt: $term_entries[0]");
+		LogMessage($GLOBALS['log'], "our location no space/case: $search_entry");
+		
+		// Priority queue to find the most optimal entry
 		$response = json_decode(search($term, $location));
-		$business_id = $response->businesses[0]->id;
-		$response = get_business($business_id);		
+		$business = $response->businesses;
+		$size = count($business);
+		$pq = new SplPriorityQueue();
+		
+		// Query the return results to find the most accurate locations based
+		// on matching entries in our term
+		for($i = 0; $i < $size; $i++){
+			$business_id = $business[$i]->id;
+			$response = get_business($business_id);
+			$business_name = json_decode($response)->name;
+			$business_name = strtolower(preg_replace('/\s*/', '', $business_name));
+			$priority = 0;
+			for($j = 0; $j < count($term_entries); $j++){
+				if(substr_count($business_name, $term_entries[$j]) > 0){
+					$priority++;
+				}
+			}
+
+			if($priority > 0){
+				$pq->insert($response, $priority);
+				LogMessage($GLOBALS['log'], "our name: $business_name");
+			}
+		}
+		
+		// Further narrow down these entries to ensure that the 1st matching neighborhood
+		// that appears would be the most accurate to our search request.
+		// If there is no neighborhood associated with our search value, return the top
+		$pq->setExtractFlags(3);
+		$pq->top();
+		$accurate = json_decode($pq->current()['data']);
+
+		while($pq->valid()){
+			$response = json_decode($pq->current()['data']);
+			$priority = json_decode($pq->current()['priority']);
+			$best_name = False;
+			$best_location = False;
+			
+			if(array_key_exists('neighborhoods', $response->location)){
+				$neighborhood = $response->location->neighborhoods[0];
+				$neighborhood = strtolower(preg_replace('/\s*/', '', $neighborhood));
+				if(strcmp($neighborhood, $search_entry) == 0){
+					$best_location = True;
+				}
+			}
+			if($priority == count($term_entries)){
+				$best_name = True;
+			}
+			if($best_location && $best_name){
+				$accurate = $response;
+				break;
+			}
+			$pq->next();
+		}
 
 		// Creating response message
-		$response_url = json_decode($response)->mobile_url;
-		$rating = json_decode($response)->rating;
-		$address = json_decode($response)->location;
+		$response_url = $accurate->mobile_url;
+		$rating = $accurate->rating;
+		$address = $accurate->location;
 		$address_message = "";
 		for($i = 0; $i < count($address->display_address); $i++){
 			if($i == count($address->display_address)-1){
@@ -172,7 +273,6 @@
 		$message = $response_url . "\n" . "Rating: $rating\n"
 					. "Address: $address_message\n";
 		BotEcho($message);
-		
 	}
 
 
